@@ -26,12 +26,18 @@ namespace VoiceAgentRag.Domain.Conversations
 
         public IReadOnlyCollection<ConversationMessage> Messages => _messages.AsReadOnly();
 
-        public void AddMessage(MessageRole role, string content)
+        
+
+        public void AddMessage(MessageRole role, string content, string? language = null)
         {
             if (string.IsNullOrWhiteSpace(content))
                 throw new ArgumentException("Message content is required.", nameof(content));
 
-            _messages.Add(new ConversationMessage(Id, role, content));
+            var lang = Languages.IsSupported(language ?? "")
+                ? language!
+                : Language;
+
+            _messages.Add(new ConversationMessage(Id, role, content, lang));
         }
 
         public void Complete()
