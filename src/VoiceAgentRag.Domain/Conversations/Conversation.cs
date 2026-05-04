@@ -8,14 +8,21 @@ namespace VoiceAgentRag.Domain.Conversations
 
         private Conversation() { }
 
-        public Conversation(string? customerReference = null)
+        public Conversation(string? customerReference = null, string? language = null)
         {
             CustomerReference = customerReference;
+
+            Language = Languages.IsSupported(language ?? "")
+                ? language!
+                : Languages.French;
+
             Status = ConversationStatus.Active;
         }
 
         public string? CustomerReference { get; private set; }
         public ConversationStatus Status { get; private set; }
+
+        public string Language { get; private set; } = Languages.French;
 
         public IReadOnlyCollection<ConversationMessage> Messages => _messages.AsReadOnly();
 

@@ -40,5 +40,7 @@ namespace VoiceAgentRag.Domain.Voice
         public string Transcription { get; private set; } = string.Empty;
         public string ResponseText { get; private set; } = string.Empty;
         public string? AudioOutputPath { get; private set; }
+
+        public string Language { get; private set; } = Languages.French;
     }
 }

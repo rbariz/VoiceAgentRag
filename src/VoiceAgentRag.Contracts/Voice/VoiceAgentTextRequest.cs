@@ -9,5 +9,6 @@ namespace VoiceAgentRag.Contracts.Voice
     public sealed record VoiceAgentTextRequest(
     Guid? ConversationId,
     string UserText,
+     string? Language = "fr",
     string? CustomerReference = null);
 }

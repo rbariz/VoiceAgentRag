@@ -9,5 +9,6 @@ namespace VoiceAgentRag.Contracts.Knowledge
     public sealed record IngestDocumentRequest(
     string Title,
     string Source,
-    string Content);
+    string Content,
+    string Language);
 }
