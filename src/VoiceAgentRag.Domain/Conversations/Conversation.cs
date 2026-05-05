@@ -31,7 +31,7 @@ namespace VoiceAgentRag.Domain.Conversations
         public void AddMessage(MessageRole role, string content, string? language = null)
         {
             if (string.IsNullOrWhiteSpace(content))
-                throw new ArgumentException("Message content is required.", nameof(content));
+                throw new ArgumentException("Message content is required.");
 
             var lang = Languages.IsSupported(language ?? "")
                 ? language!

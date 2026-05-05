@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Pgvector;
 using VoiceAgentRag.Domain.Knowledge;
 
 namespace VoiceAgentRag.Infrastructure.Persistence.Configurations
@@ -25,6 +26,8 @@ namespace VoiceAgentRag.Infrastructure.Persistence.Configurations
             builder.Property(x => x.CreatedAtUtc)
                 .HasColumnName("created_at_utc")
                 .IsRequired();
+
+            builder.Ignore(x => x.Embedding);
 
             builder.HasIndex(x => x.DocumentId);
             builder.HasIndex(x => x.Language);

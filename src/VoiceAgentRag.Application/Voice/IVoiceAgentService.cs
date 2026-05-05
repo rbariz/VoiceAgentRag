@@ -12,5 +12,16 @@ namespace VoiceAgentRag.Application.Voice
         Task<VoiceAgentResponse> HandleTextAsync(
             VoiceAgentTextRequest request,
             CancellationToken cancellationToken = default);
+
+        Task<VoiceAgentAudioResponse> HandleAudioAsync(
+            Stream audioStream,
+            string? language,
+            string? customerReference,
+            Guid? conversationId,
+            CancellationToken cancellationToken = default);
+
+        Task<VoiceAgentSpeakResponse> HandleTextAndSpeakAsync(
+    VoiceAgentTextRequest request,
+    CancellationToken cancellationToken = default);
     }
 }

@@ -1,3 +1,4 @@
+using VoiceAgentRag.Api.Middleware;
 using VoiceAgentRag.Application;
 using VoiceAgentRag.Infrastructure;
 
@@ -10,7 +11,21 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("DemoCors", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:5035", "http://localhost:5050")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 var app = builder.Build();
+
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
@@ -18,7 +33,13 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
+app.UseCors("DemoCors");
 
 app.MapControllers();
 

@@ -29,5 +29,10 @@ namespace VoiceAgentRag.Infrastructure.Persistence.Repositories
         {
             _db.Conversations.Add(conversation);
         }
+
+        public void AddMessage(ConversationMessage message)
+        {
+            _db.ConversationMessages.Add(message);
+        }
     }
 }

@@ -9,10 +9,10 @@ namespace VoiceAgentRag.Domain.Conversations
         public ConversationMessage(Guid conversationId, MessageRole role, string content, string? language = null)
         {
             if (conversationId == Guid.Empty)
-                throw new ArgumentException("Conversation id is required.", nameof(conversationId));
+                throw new ArgumentException("Conversation id is required.");
 
             if (string.IsNullOrWhiteSpace(content))
-                throw new ArgumentException("Message content is required.", nameof(content));
+                throw new ArgumentException("Message content is required.");
 
             ConversationId = conversationId;
             Role = role;

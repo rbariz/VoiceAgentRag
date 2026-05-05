@@ -1,4 +1,5 @@
-﻿using VoiceAgentRag.Application.Abstractions.Persistence;
+﻿using VoiceAgentRag.Application.Abstractions.AI;
+using VoiceAgentRag.Application.Abstractions.Persistence;
 using VoiceAgentRag.Application.Abstractions.Rag;
 using VoiceAgentRag.Contracts.Knowledge;
 using VoiceAgentRag.Domain.Common;
@@ -11,15 +12,18 @@ namespace VoiceAgentRag.Application.Knowledge
         private readonly IKnowledgeRepository _knowledgeRepository;
         private readonly ITextChunker _chunker;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IEmbeddingGenerator _embeddingGenerator;
 
         public KnowledgeIngestionService(
             IKnowledgeRepository knowledgeRepository,
             ITextChunker chunker,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IEmbeddingGenerator embeddingGenerator)
         {
             _knowledgeRepository = knowledgeRepository;
             _chunker = chunker;
             _unitOfWork = unitOfWork;
+            _embeddingGenerator = embeddingGenerator;
         }
 
         public async Task<IngestDocumentResponse> IngestAsync(
@@ -27,13 +31,13 @@ namespace VoiceAgentRag.Application.Knowledge
             CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(request.Title))
-                throw new ArgumentException("Title is required.", nameof(request));
+                throw new ArgumentException("Title is required.");
 
             if (string.IsNullOrWhiteSpace(request.Source))
-                throw new ArgumentException("Source is required.", nameof(request));
+                throw new ArgumentException("Source is required.");
 
             if (string.IsNullOrWhiteSpace(request.Content))
-                throw new ArgumentException("Content is required.", nameof(request));
+                throw new ArgumentException("Content is required.");
 
             var language = Languages.IsSupported(request.Language)
                 ? request.Language
@@ -58,6 +62,18 @@ namespace VoiceAgentRag.Application.Knowledge
             _knowledgeRepository.AddChunks(chunks);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            foreach (var chunk in chunks)
+            {
+                var embedding = await _embeddingGenerator.GenerateEmbeddingAsync(
+                    $"search_document: {chunk.Content}",
+                    cancellationToken);
+
+                await _knowledgeRepository.UpdateChunkEmbeddingAsync(
+                    chunk.Id,
+                    embedding,
+                    cancellationToken);
+            }
 
             return new IngestDocumentResponse(
                 document.Id,

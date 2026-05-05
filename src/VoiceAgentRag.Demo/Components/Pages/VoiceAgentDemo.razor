@@ -1,0 +1,280 @@
+﻿@page "/voice-agent-demo"
+@using VoiceAgentRag.Demo.Services
+@using VoiceAgentRag.Demo.Services.Models
+@inject VoiceAgentApiClient ApiClient
+
+<div class="demo-shell">
+    <main class="container py-5">
+        <div class="d-flex flex-column flex-lg-row justify-content-between gap-4 mb-4">
+            <div>
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <span class="badge rounded-pill badge-soft-brand px-3 py-2">RAG</span>
+                    <span class="badge rounded-pill badge-soft-teal px-3 py-2">Ollama</span>
+                    <span class="badge rounded-pill badge-soft-accent px-3 py-2">Vector Search</span>
+                </div>
+
+                <h1 class="fw-bold display-6 mb-3">Voice Agent RAG Demo</h1>
+                <p class="text-secondary mb-0" style="max-width: 720px;">
+                    AI customer service assistant powered by RAG, Ollama, pgvector and multilingual conversation flow.
+                </p>
+            </div>
+
+            <div class="card demo-card p-3 align-self-lg-start">
+                <label class="form-label small text-uppercase fw-bold text-secondary">Language</label>
+                <select value="@Language" @onchange="OnLanguageChanged" class="form-select">
+                    <option value="fr">Français</option>
+                    <option value="en">English</option>
+                    <option value="ar">العربية</option>
+                </select>
+                <div class="form-text">
+                    Changing language starts a new conversation.
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <section class="col-12 col-lg-8">
+                <div class="card demo-card chat-panel overflow-hidden">
+                    <div class="card-header bg-white border-0 border-bottom p-4">
+                        <div class="d-flex justify-content-between gap-3 align-items-start">
+                            <div>
+                                <h2 class="h6 fw-bold mb-1">Conversation</h2>
+                                <p class="small text-secondary mb-0">
+                                    Conversation ID:
+                                    <span class="font-monospace">@((ConversationId?.ToString()) ?? "not started")</span>
+                                </p>
+                            </div>
+
+                            <button class="btn btn-outline-secondary btn-sm" @onclick="Reset">
+                                New demo
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="chat-scroll p-4">
+                        @if (Messages.Count == 0)
+                        {
+                            <div class="d-flex align-items-center justify-content-center h-100 text-center">
+                                <div style="max-width: 420px;">
+                                    <div class="fs-1 mb-3">🎙️</div>
+                                    <h3 class="h5 fw-bold">Start a customer call simulation</h3>
+                                    <p class="text-secondary mb-0">
+                                        Ask about delivery, orders, appointments, refunds or support handoff.
+                                    </p>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            @foreach (var message in Messages)
+                            {
+                                var isUser = message.Role == "User";
+
+                                <div class="d-flex mb-3 @(isUser ? "justify-content-end" : "justify-content-start")">
+                                    <div class="chat-bubble @(isUser ? "chat-bubble-user" : "chat-bubble-agent")">
+                                        <div class="small fw-bold opacity-75 mb-1">
+                                            @(isUser ? "Customer" : "Voice Agent")
+                                        </div>
+                                        <div style="white-space: pre-wrap;">@message.Content</div>
+                                    </div>
+                                </div>
+                            }
+
+                            @if (IsLoading)
+                            {
+                                <div class="d-flex justify-content-start">
+                                    <div class="chat-bubble chat-bubble-agent text-secondary">
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                        Thinking with RAG + Ollama...
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+
+                    <div class="card-footer bg-white border-0 border-top p-4">
+                        @if (!string.IsNullOrWhiteSpace(Error))
+                        {
+                            <div class="alert alert-danger small mb-3">
+                                @Error
+                            </div>
+                        }
+
+                        <div class="row g-2">
+                            <div class="col-12 col-md">
+                                <textarea @bind="UserText"
+                                          class="form-control"
+                                          rows="2"
+                                          placeholder="@Placeholder"></textarea>
+                            </div>
+
+                            <div class="col-12 col-md-auto">
+                                <button class="btn btn-brand h-100 px-4 w-100"
+                                        @onclick="SendAsync">
+                                    @(IsLoading ? "Sending..." : "Send")
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <aside class="col-12 col-lg-4">
+                <div class="card demo-card p-4 mb-4">
+                    <h3 class="h6 fw-bold mb-3">Runtime</h3>
+
+                    <div class="d-flex justify-content-between border-bottom py-2">
+                        <span class="text-secondary">LLM</span>
+                        <strong>Ollama</strong>
+                    </div>
+                    <div class="d-flex justify-content-between border-bottom py-2">
+                        <span class="text-secondary">Retrieval</span>
+                        <strong>Hybrid RAG</strong>
+                    </div>
+                    <div class="d-flex justify-content-between border-bottom py-2">
+                        <span class="text-secondary">Vector DB</span>
+                        <strong>pgvector</strong>
+                    </div>
+                    <div class="d-flex justify-content-between py-2">
+                        <span class="text-secondary">STT/TTS</span>
+                        <strong>Mocked</strong>
+                    </div>
+                </div>
+
+                <div class="card demo-card p-4 mb-4">
+                    <h3 class="h6 fw-bold mb-3">Try prompts</h3>
+
+                    <div class="d-grid gap-2">
+                        @foreach (var prompt in SuggestedPrompts)
+                        {
+                            <button class="btn btn-light border text-start"
+                                    @onclick="() => UsePrompt(prompt)">
+                                @prompt
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                @if (LastResponse is not null)
+                {
+                    <div class="card demo-card p-4">
+                        <h3 class="h6 fw-bold mb-3">Last AI result</h3>
+
+                        <div class="mb-3">
+                            <div class="small text-secondary">Intent</div>
+                            <div class="font-monospace small">@LastResponse.Intent</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="small text-secondary">Language</div>
+                            <strong>@LastResponse.Language</strong>
+                        </div>
+
+                        <div>
+                            <div class="small text-secondary">Human handoff</div>
+                            <strong class="@(LastResponse.RequiresHumanHandoff ? "text-warning" : "text-success")">
+                                @(LastResponse.RequiresHumanHandoff ? "Required" : "Not required")
+                            </strong>
+                        </div>
+                    </div>
+                }
+            </aside>
+        </div>
+    </main>
+</div>
+
+@code {
+    private Guid? ConversationId;
+    private string Language = "fr";
+    private string UserText = "";
+    private bool IsLoading;
+    private string? Error;
+    private VoiceAgentResponse? LastResponse;
+
+    private readonly List<ChatMessageVm> Messages = [];
+
+    private string Placeholder => Language switch
+    {
+        "ar" => "اكتب سؤال العميل هنا...",
+        "en" => "Type the customer question here...",
+        _ => "Tapez la question du client ici..."
+    };
+
+    private string[] SuggestedPrompts => Language switch
+    {
+        "ar" => ["أريد تتبع طلبي", "ما هي مدة التوصيل؟", "أريد التحدث مع موظف"],
+        "en" => ["How long does standard delivery take?", "I want to track my order", "I want to speak to a human agent"],
+        _ => ["Combien de temps prend la livraison standard ?", "Je veux suivre ma commande", "Je veux parler à un conseiller"]
+    };
+
+    private void UsePrompt(string prompt)
+    {
+        UserText = prompt;
+    }
+
+    private async Task SendAsync()
+    {
+        if (string.IsNullOrWhiteSpace(UserText) || IsLoading)
+            return;
+
+        Console.WriteLine("SendAsync clicked");
+
+        Error = null;
+        IsLoading = true;
+
+        var userMessage = UserText.Trim();
+        UserText = "";
+
+        Messages.Add(new ChatMessageVm("User", userMessage, DateTime.UtcNow));
+
+        try
+        {
+            var request = new VoiceAgentTextRequest(
+                ConversationId,
+                userMessage,
+                Language,
+                "DEMO-CUSTOMER");
+
+            var response = await ApiClient.AskAsync(request);
+
+            ConversationId = response.ConversationId;
+            LastResponse = response;
+
+            Messages.Add(new ChatMessageVm("Assistant", response.Answer, DateTime.UtcNow));
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.ToString());
+
+            Error = ex.InnerException is not null
+                ? $"{ex.Message} | YYY Inner: {ex.InnerException.Message}"
+                : ex.Message;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void Reset()
+    {
+        ConversationId = null;
+        UserText = "";
+        Error = null;
+        LastResponse = null;
+        Messages.Clear();
+    }
+    private void OnLanguageChanged(ChangeEventArgs e)
+    {
+        var newLanguage = e.Value?.ToString() ?? "fr";
+
+        if (newLanguage == Language)
+            return;
+
+        Language = newLanguage;
+        ConversationId = null;
+        Error = null;
+        LastResponse = null;
+        Messages.Clear();
+    }
+}

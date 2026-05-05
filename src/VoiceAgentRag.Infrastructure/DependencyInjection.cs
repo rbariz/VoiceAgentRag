@@ -7,9 +7,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using VoiceAgentRag.Application.Abstractions.AI;
+using VoiceAgentRag.Application.Abstractions.Audio;
 using VoiceAgentRag.Application.Abstractions.Persistence;
 using VoiceAgentRag.Application.Abstractions.Rag;
 using VoiceAgentRag.Infrastructure.AI;
+using VoiceAgentRag.Infrastructure.AI.Ollama;
+using VoiceAgentRag.Infrastructure.Audio;
+using VoiceAgentRag.Infrastructure.Options;
 using VoiceAgentRag.Infrastructure.Persistence;
 using VoiceAgentRag.Infrastructure.Persistence.Repositories;
 using VoiceAgentRag.Infrastructure.Rag;
@@ -30,6 +34,26 @@ namespace VoiceAgentRag.Infrastructure
                 options.UseNpgsql(connectionString);
             });
 
+
+            services.Configure<AiProviderOptions>(
+    configuration.GetSection("AiProviders"));
+
+            var aiOptions = configuration
+    .GetSection("AiProviders")
+    .Get<AiProviderOptions>() ?? new AiProviderOptions();
+
+            if (!string.Equals(aiOptions.LlmProvider, "Fake", StringComparison.OrdinalIgnoreCase)
+                            && !string.Equals(aiOptions.LlmProvider, "Ollama", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("Supported LLM providers: Fake, Ollama.");
+            }
+
+            if (!string.Equals(aiOptions.SpeechToTextProvider, "Fake", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Only Fake Speech-to-Text provider is supported in the MVP.");
+
+            if (!string.Equals(aiOptions.TextToSpeechProvider, "Fake", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Only Fake Text-to-Speech provider is supported in the MVP.");
+
             services.AddScoped<IConversationRepository, ConversationRepository>();
             services.AddScoped<IKnowledgeRepository, KnowledgeRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -38,8 +62,31 @@ namespace VoiceAgentRag.Infrastructure
             services.AddScoped<ITextChunker, SimpleTextChunker>();
             services.AddScoped<IRagService, SimpleRagService>();
 
-            services.AddScoped<IIntentDetector, FakeIntentDetector>();
-            services.AddScoped<IAnswerGenerator, FakeAnswerGenerator>();
+            services.AddScoped<IIntentDetector, SimpleIntentDetector>();
+
+            if (string.Equals(aiOptions.LlmProvider, "Ollama", StringComparison.OrdinalIgnoreCase))
+            {
+                services.AddHttpClient<IAnswerGenerator, OllamaAnswerGenerator>(client =>
+                {
+                    client.BaseAddress = new Uri(aiOptions.OllamaBaseUrl);
+                    client.Timeout = TimeSpan.FromSeconds(aiOptions.OllamaTimeoutSeconds);
+                });
+            }
+            else
+            {
+                services.AddScoped<IAnswerGenerator, SimpleRagAnswerGenerator>();
+            }
+
+            services.AddScoped<ISpeechToTextService, FakeSpeechToTextService>();
+            services.AddScoped<ITextToSpeechService, FakeTextToSpeechService>();
+
+            services.AddScoped<IVoiceInteractionRepository, VoiceInteractionRepository>();
+
+            services.AddHttpClient<IEmbeddingGenerator, OllamaEmbeddingGenerator>(client =>
+            {
+                client.BaseAddress = new Uri(aiOptions.OllamaBaseUrl);
+                client.Timeout = TimeSpan.FromSeconds(aiOptions.OllamaTimeoutSeconds);
+            });
 
             return services;
         }

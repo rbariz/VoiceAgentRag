@@ -6,5 +6,7 @@ namespace VoiceAgentRag.Application.Abstractions.Persistence
     {
         Task<Conversation?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
         void Add(Conversation conversation);
+
+        void AddMessage(ConversationMessage message);
     }
 }

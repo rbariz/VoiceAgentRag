@@ -13,26 +13,31 @@ namespace VoiceAgentRag.Domain.Voice
         private VoiceInteraction() { }
 
         public VoiceInteraction(
-            Guid conversationId,
-            string? audioInputPath,
-            string transcription,
-            string responseText,
-            string? audioOutputPath)
+         Guid conversationId,
+         string? audioInputPath,
+         string transcription,
+         string responseText,
+         string? audioOutputPath,
+         string? language = null)
         {
             if (conversationId == Guid.Empty)
-                throw new ArgumentException("Conversation id is required.", nameof(conversationId));
+                throw new ArgumentException("Conversation id is required.");
 
             if (string.IsNullOrWhiteSpace(transcription))
-                throw new ArgumentException("Transcription is required.", nameof(transcription));
+                throw new ArgumentException("Transcription is required.");
 
             if (string.IsNullOrWhiteSpace(responseText))
-                throw new ArgumentException("Response text is required.", nameof(responseText));
+                throw new ArgumentException("Response text is required.");
 
             ConversationId = conversationId;
             AudioInputPath = audioInputPath;
             Transcription = transcription.Trim();
             ResponseText = responseText.Trim();
             AudioOutputPath = audioOutputPath;
+
+            Language = Languages.IsSupported(language ?? "")
+                ? language!
+                : Languages.French;
         }
 
         public Guid ConversationId { get; private set; }

@@ -14,13 +14,13 @@ namespace VoiceAgentRag.Domain.Knowledge
         public KnowledgeDocument(string title, string source, string content, string? language = null)
         {
             if (string.IsNullOrWhiteSpace(title))
-                throw new ArgumentException("Document title is required.", nameof(title));
+                throw new ArgumentException("Document title is required.");
 
             if (string.IsNullOrWhiteSpace(source))
-                throw new ArgumentException("Document source is required.", nameof(source));
+                throw new ArgumentException("Document source is required.");
 
             if (string.IsNullOrWhiteSpace(content))
-                throw new ArgumentException("Document content is required.", nameof(content));
+                throw new ArgumentException("Document content is required.");
 
             Title = title.Trim();
             Source = source.Trim();

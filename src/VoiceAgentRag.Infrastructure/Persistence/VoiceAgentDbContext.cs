@@ -25,6 +25,7 @@ namespace VoiceAgentRag.Infrastructure.Persistence
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.HasPostgresExtension("vector");
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(VoiceAgentDbContext).Assembly);
         }
     }
