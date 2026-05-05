@@ -2,6 +2,7 @@
 @using VoiceAgentRag.Demo.Services
 @using VoiceAgentRag.Demo.Services.Models
 @inject VoiceAgentApiClient ApiClient
+@inject IJSRuntime JS
 
 <div class="demo-shell">
     <main class="container py-5">
@@ -72,9 +73,22 @@
 
                                 <div class="d-flex mb-3 @(isUser ? "justify-content-end" : "justify-content-start")">
                                     <div class="chat-bubble @(isUser ? "chat-bubble-user" : "chat-bubble-agent")">
-                                        <div class="small fw-bold opacity-75 mb-1">
-                                            @(isUser ? "Customer" : "Voice Agent")
+
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <div class="small fw-bold opacity-75">
+                                                @(isUser ? "Customer" : "Voice Agent")
+                                            </div>
+
+                                            @if (!isUser)
+                                            {
+                                                <button class="btn btn-sm btn-light border"
+                                                        title="Play audio"
+                                                        @onclick="() => SpeakAsync(message.Content)">
+                                                    🔊
+                                                </button>
+                                            }
                                         </div>
+
                                         <div style="white-space: pre-wrap;">@message.Content</div>
                                     </div>
                                 </div>
@@ -305,6 +319,7 @@
                         answer,
                         item.RequiresHumanHandoff ?? LastResponse?.RequiresHumanHandoff ?? false);
 
+                    await SpeakAsync(answer);
                     await InvokeAsync(StateHasChanged);
                 }
             }
@@ -435,7 +450,7 @@
                         item.Intent ?? LastResponse?.Intent ?? "unknown",
                         answer,
                         item.RequiresHumanHandoff ?? LastResponse?.RequiresHumanHandoff ?? false);
-
+                    await SpeakAsync(answer);
                     await InvokeAsync(StateHasChanged);
                 }
             }
@@ -452,5 +467,13 @@
         {
             IsLoading = false;
         }
+    }
+
+    private async Task SpeakAsync(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return;
+
+        await JS.InvokeVoidAsync("tts.speak", text, Language);
     }
 }
