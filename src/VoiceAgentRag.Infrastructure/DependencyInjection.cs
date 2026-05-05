@@ -34,7 +34,10 @@ namespace VoiceAgentRag.Infrastructure
             services.AddScoped<IKnowledgeRepository, KnowledgeRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-            services.AddScoped<IRagService, FakeRagService>();
+
+            services.AddScoped<ITextChunker, SimpleTextChunker>();
+            services.AddScoped<IRagService, SimpleRagService>();
+
             services.AddScoped<IIntentDetector, FakeIntentDetector>();
             services.AddScoped<IAnswerGenerator, FakeAnswerGenerator>();
 
