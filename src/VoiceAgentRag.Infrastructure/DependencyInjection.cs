@@ -88,6 +88,12 @@ namespace VoiceAgentRag.Infrastructure
                 client.Timeout = TimeSpan.FromSeconds(aiOptions.OllamaTimeoutSeconds);
             });
 
+            services.AddHttpClient<IStreamingAnswerGenerator, OllamaStreamingAnswerGenerator>(client =>
+            {
+                client.BaseAddress = new Uri(aiOptions.OllamaBaseUrl);
+                client.Timeout = TimeSpan.FromSeconds(aiOptions.OllamaTimeoutSeconds);
+            });
+
             return services;
         }
     }

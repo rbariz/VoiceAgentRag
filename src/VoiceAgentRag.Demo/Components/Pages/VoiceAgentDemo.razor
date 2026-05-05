@@ -235,19 +235,64 @@
                 Language,
                 "DEMO-CUSTOMER");
 
-            var response = await ApiClient.AskAsync(request);
+            var answer = "";
 
-            ConversationId = response.ConversationId;
-            LastResponse = response;
+            Messages.Add(new ChatMessageVm("Assistant", "", DateTime.UtcNow));
+            var assistantIndex = Messages.Count - 1;
 
-            Messages.Add(new ChatMessageVm("Assistant", response.Answer, DateTime.UtcNow));
+            await foreach (var item in ApiClient.AskStreamAsync(request))
+            {
+                if (item.Type == "metadata")
+                {
+                    ConversationId = item.ConversationId;
+
+                    LastResponse = new VoiceAgentResponse(
+                        item.ConversationId ?? Guid.Empty,
+                        item.Language ?? Language,
+                        userMessage,
+                        item.Intent ?? "unknown",
+                        "",
+                        item.RequiresHumanHandoff ?? false);
+
+                    await InvokeAsync(StateHasChanged);
+                    continue;
+                }
+
+                if (item.Type == "token")
+                {
+                    answer += item.Token ?? "";
+
+                    Messages[assistantIndex] = new ChatMessageVm(
+                        "Assistant",
+                        answer,
+                        DateTime.UtcNow);
+
+                    await InvokeAsync(StateHasChanged);
+                    continue;
+                }
+
+                if (item.Type == "done")
+                {
+                    ConversationId = item.ConversationId ?? ConversationId;
+
+                    LastResponse = new VoiceAgentResponse(
+                        ConversationId ?? Guid.Empty,
+                        item.Language ?? Language,
+                        userMessage,
+                        item.Intent ?? LastResponse?.Intent ?? "unknown",
+                        answer,
+                        item.RequiresHumanHandoff ?? LastResponse?.RequiresHumanHandoff ?? false);
+
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
         }
         catch (Exception ex)
         {
             Console.WriteLine(ex.ToString());
 
             Error = ex.InnerException is not null
-                ? $"{ex.Message} | YYY Inner: {ex.InnerException.Message}"
+                ? $"{ex.Message} | Inner: {ex.InnerException.Message}"
                 : ex.Message;
         }
         finally

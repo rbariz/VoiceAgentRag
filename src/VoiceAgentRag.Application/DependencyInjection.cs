@@ -20,6 +20,8 @@ namespace VoiceAgentRag.Application
 
             services.AddScoped<IConversationQueryService, ConversationQueryService>();
 
+            services.AddScoped<IVoiceAgentStreamingService, VoiceAgentStreamingService>();
+
             return services;
         }
     }

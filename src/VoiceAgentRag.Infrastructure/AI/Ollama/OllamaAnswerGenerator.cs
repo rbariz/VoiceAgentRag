@@ -1,6 +1,6 @@
-﻿using System.Net.Http.Json;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Net.Http.Json;
 using VoiceAgentRag.Application.Abstractions.AI;
 using VoiceAgentRag.Infrastructure.Options;
 
