@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
+using VoiceAgentRag.Application.Common;
 using VoiceAgentRag.Application.Voice;
 using VoiceAgentRag.Contracts.Voice;
 
@@ -92,6 +93,35 @@ namespace VoiceAgentRag.Api.Controllers
             Response.ContentType = "application/x-ndjson; charset=utf-8";
 
             await foreach (var item in _streamingService.HandleTextStreamAsync(request, cancellationToken))
+            {
+                var json = JsonSerializer.Serialize(item);
+                await Response.WriteAsync(json + "\n", cancellationToken);
+                await Response.Body.FlushAsync(cancellationToken);
+            }
+        }
+
+        [HttpPost("audio/stream")]
+        [Consumes("multipart/form-data")]
+        public async Task StreamAudio(
+    IFormFile audioFile,
+    [FromForm] string? language,
+    [FromForm] string? customerReference,
+    [FromForm] Guid? conversationId,
+    CancellationToken cancellationToken)
+        {
+            if (audioFile is null || audioFile.Length == 0)
+                throw new ValidationException("Audio file is required.");
+
+            Response.ContentType = "application/x-ndjson; charset=utf-8";
+
+            await using var stream = audioFile.OpenReadStream();
+
+            await foreach (var item in _streamingService.HandleAudioStreamAsync(
+                stream,
+                language,
+                customerReference,
+                conversationId,
+                cancellationToken))
             {
                 var json = JsonSerializer.Serialize(item);
                 await Response.WriteAsync(json + "\n", cancellationToken);

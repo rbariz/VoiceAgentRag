@@ -7,5 +7,12 @@ namespace VoiceAgentRag.Application.Voice
         IAsyncEnumerable<VoiceAgentStreamEvent> HandleTextStreamAsync(
     VoiceAgentTextRequest request,
     CancellationToken cancellationToken = default);
+
+        IAsyncEnumerable<VoiceAgentStreamEvent> HandleAudioStreamAsync(
+    Stream audioStream,
+    string? language,
+    string? customerReference,
+    Guid? conversationId,
+    CancellationToken cancellationToken = default);
     }
 }

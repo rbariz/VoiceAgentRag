@@ -29,5 +29,10 @@ namespace VoiceAgentRag.Infrastructure.Options
         public string EmbeddingProvider { get; set; } = "Ollama";
         public string OllamaEmbeddingModel { get; set; } = "nomic-embed-text";
         public int EmbeddingDimensions { get; set; } = 768;
+
+        //
+
+        public string OpenAiBaseUrl { get; set; } = "https://api.openai.com";
+        public string OpenAiTranscriptionModel { get; set; } = "whisper-1";
     }
 }

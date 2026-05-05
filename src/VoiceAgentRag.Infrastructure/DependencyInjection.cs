@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 using VoiceAgentRag.Application.Abstractions.AI;
@@ -17,6 +18,7 @@ using VoiceAgentRag.Infrastructure.Options;
 using VoiceAgentRag.Infrastructure.Persistence;
 using VoiceAgentRag.Infrastructure.Persistence.Repositories;
 using VoiceAgentRag.Infrastructure.Rag;
+using static VoiceAgentRag.Infrastructure.Audio.FakeTextToSpeechService;
 
 namespace VoiceAgentRag.Infrastructure
 {
@@ -48,8 +50,8 @@ namespace VoiceAgentRag.Infrastructure
                 throw new InvalidOperationException("Supported LLM providers: Fake, Ollama.");
             }
 
-            if (!string.Equals(aiOptions.SpeechToTextProvider, "Fake", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("Only Fake Speech-to-Text provider is supported in the MVP.");
+            //if (!string.Equals(aiOptions.SpeechToTextProvider, "Fake", StringComparison.OrdinalIgnoreCase))
+            //    throw new InvalidOperationException("Only Fake Speech-to-Text provider is supported in the MVP.");
 
             if (!string.Equals(aiOptions.TextToSpeechProvider, "Fake", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("Only Fake Text-to-Speech provider is supported in the MVP.");
@@ -77,7 +79,30 @@ namespace VoiceAgentRag.Infrastructure
                 services.AddScoped<IAnswerGenerator, SimpleRagAnswerGenerator>();
             }
 
-            services.AddScoped<ISpeechToTextService, FakeSpeechToTextService>();
+            var useOpenAi = string.Equals(
+                    aiOptions.SpeechToTextProvider,
+                    "OpenAIWhisper",
+                    StringComparison.OrdinalIgnoreCase)
+                    && !string.IsNullOrWhiteSpace(aiOptions.OpenAiApiKey)
+                    && aiOptions.OpenAiApiKey != "YOUR_KEY";
+
+            if (useOpenAi)
+            {
+                services.AddHttpClient<ISpeechToTextService, OpenAiWhisperSpeechToTextService>(client =>
+                {
+                    client.BaseAddress = new Uri(aiOptions.OpenAiBaseUrl);
+                    client.DefaultRequestHeaders.Authorization =
+                        new AuthenticationHeaderValue("Bearer", aiOptions.OpenAiApiKey);
+                });
+
+                Console.WriteLine("STT Provider: OpenAI Whisper");
+            }
+            else
+            {
+                services.AddScoped<ISpeechToTextService, FakeSpeechToTextService>();
+
+                Console.WriteLine("STT Provider: Fake (no valid API key)");
+            }
             services.AddScoped<ITextToSpeechService, FakeTextToSpeechService>();
 
             services.AddScoped<IVoiceInteractionRepository, VoiceInteractionRepository>();

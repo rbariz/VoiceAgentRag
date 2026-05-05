@@ -14,11 +14,7 @@ namespace VoiceAgentRag.Infrastructure.Audio
             string? language,
             CancellationToken cancellationToken = default)
         {
-            var lang = Languages.IsSupported(language ?? "")
-                ? language!
-                : Languages.French;
-
-            var text = lang switch
+            var text = language switch
             {
                 "ar" => "أريد تتبع طلبي",
                 "en" => "I want to track my order",
@@ -27,8 +23,8 @@ namespace VoiceAgentRag.Infrastructure.Audio
 
             return Task.FromResult(new SpeechToTextResult(
                 text,
-                lang,
-                Confidence: 0.99));
+                language ?? "fr",
+                null));
         }
     }
 }

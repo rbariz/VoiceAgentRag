@@ -26,6 +26,11 @@ Fonctionnalités :
 ![Demo Screenshot2 AR](docs/demo2-ar.png)
 ![Demo Screenshot2 EN](docs/demo2-en.png)
 
+#### Démo upload audio
+
+![Démo upload audio 1](docs/demo-audio1.png)
+![Démo upload audio 2](docs/demo-audio2.png)
+
 ---
 
 ## Objectifs

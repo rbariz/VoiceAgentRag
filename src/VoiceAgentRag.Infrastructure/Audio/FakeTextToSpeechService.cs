@@ -3,7 +3,7 @@ using VoiceAgentRag.Application.Abstractions.Audio;
 
 namespace VoiceAgentRag.Infrastructure.Audio
 {
-    public sealed class FakeTextToSpeechService : ITextToSpeechService
+    public sealed partial class FakeTextToSpeechService : ITextToSpeechService
     {
         public Task<TextToSpeechResult> SynthesizeAsync(
             string text,
@@ -18,5 +18,5 @@ namespace VoiceAgentRag.Infrastructure.Audio
                 ContentType: "audio/wav",
                 FileExtension: ".wav"));
         }
-    }
+}
 }

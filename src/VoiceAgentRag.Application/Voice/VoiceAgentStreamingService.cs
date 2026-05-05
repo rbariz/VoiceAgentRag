@@ -1,5 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using VoiceAgentRag.Application.Abstractions.AI;
+using VoiceAgentRag.Application.Abstractions.Audio;
 using VoiceAgentRag.Application.Abstractions.Persistence;
 using VoiceAgentRag.Application.Abstractions.Rag;
 using VoiceAgentRag.Application.Common;
@@ -16,19 +17,21 @@ namespace VoiceAgentRag.Application.Voice
         private readonly IIntentDetector _intentDetector;
         private readonly IStreamingAnswerGenerator _streamingAnswerGenerator;
         private readonly IUnitOfWork _unitOfWork;
-
+        private readonly ISpeechToTextService _speechToText;
         public VoiceAgentStreamingService(
             IConversationRepository conversations,
             IRagService rag,
             IIntentDetector intentDetector,
             IStreamingAnswerGenerator streamingAnswerGenerator,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            ISpeechToTextService speechToText)
         {
             _conversations = conversations;
             _rag = rag;
             _intentDetector = intentDetector;
             _streamingAnswerGenerator = streamingAnswerGenerator;
             _unitOfWork = unitOfWork;
+            _speechToText = speechToText;
         }
 
         public async IAsyncEnumerable<VoiceAgentStreamEvent> HandleTextStreamAsync(
@@ -130,6 +133,39 @@ namespace VoiceAgentRag.Application.Voice
                 Intent: intent.Name,
                 RequiresHumanHandoff: intent.RequiresHumanHandoff,
                 Token: null);
+        }
+
+
+        public async IAsyncEnumerable<VoiceAgentStreamEvent> HandleAudioStreamAsync(
+    Stream audioStream,
+    string? language,
+    string? customerReference,
+    Guid? conversationId,
+    [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            var transcription = await _speechToText.TranscribeAsync(
+                audioStream,
+                language,
+                cancellationToken);
+
+            var request = new VoiceAgentTextRequest(
+                conversationId,
+                transcription.Text,
+                transcription.Language,
+                customerReference);
+
+            yield return new VoiceAgentStreamEvent(
+                Type: "transcription",
+                ConversationId: conversationId,
+                Language: transcription.Language,
+                Intent: null,
+                RequiresHumanHandoff: null,
+                Token: transcription.Text);
+
+            await foreach (var item in HandleTextStreamAsync(request, cancellationToken))
+            {
+                yield return item;
+            }
         }
     }
 }

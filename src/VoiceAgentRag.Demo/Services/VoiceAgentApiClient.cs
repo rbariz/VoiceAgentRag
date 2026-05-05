@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Net.Http.Headers;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using VoiceAgentRag.Demo.Services.Models;
 
@@ -77,6 +78,76 @@ namespace VoiceAgentRag.Demo.Services
                 if (item is not null)
                     yield return item;
             }
+        }
+
+
+        public async IAsyncEnumerable<VoiceAgentStreamEvent> AskAudioStreamAsync(
+     Stream audioStream,
+     string fileName,
+     string language,
+     Guid? conversationId,
+     [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            using var content = new MultipartFormDataContent();
+
+            content.Add(new StringContent(language), "language");
+            content.Add(new StringContent("DEMO-CUSTOMER"), "customerReference");
+
+            if (conversationId.HasValue)
+                content.Add(new StringContent(conversationId.Value.ToString()), "conversationId");
+
+            var fileContent = new StreamContent(audioStream);
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue(GetContentType(fileName));
+
+            content.Add(fileContent, "audioFile", fileName);
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/voice-agent/audio/stream")
+            {
+                Content = content
+            };
+
+            using var response = await _httpClient.SendAsync(
+                request,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync(cancellationToken);
+                throw new InvalidOperationException($"API error {(int)response.StatusCode}: {error}");
+            }
+
+            await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var reader = new StreamReader(responseStream);
+
+            while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested)
+            {
+                var line = await reader.ReadLineAsync(cancellationToken);
+
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
+
+                var item = JsonSerializer.Deserialize<VoiceAgentStreamEvent>(
+                    line,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (item is not null)
+                    yield return item;
+            }
+        }
+
+        private static string GetContentType(string fileName)
+        {
+            var ext = Path.GetExtension(fileName).ToLowerInvariant();
+
+            return ext switch
+            {
+                ".wav" => "audio/wav",
+                ".m4a" => "audio/mp4",
+                ".webm" => "audio/webm",
+                ".mp3" => "audio/mpeg",
+                _ => "application/octet-stream"
+            };
         }
     }
 }
