@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using VoiceAgentRag.Application.Abstractions.Realtime;
 using VoiceAgentRag.Application.Conversations;
 using VoiceAgentRag.Application.Knowledge;
 using VoiceAgentRag.Application.Voice;
@@ -21,6 +22,8 @@ namespace VoiceAgentRag.Application
             services.AddScoped<IConversationQueryService, ConversationQueryService>();
 
             services.AddScoped<IVoiceAgentStreamingService, VoiceAgentStreamingService>();
+
+            services.AddScoped<IRealtimeNotifier, NoOpRealtimeNotifier>();
 
             return services;
         }

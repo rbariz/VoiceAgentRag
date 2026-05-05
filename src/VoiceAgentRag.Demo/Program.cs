@@ -6,6 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+
 builder.Services.AddHttpClient<VoiceAgentApiClient>(client =>
 {
     client.BaseAddress = new Uri("http://localhost:5234");

@@ -32,6 +32,7 @@ Features:
 ![Audio Upload Demo 2](docs/demo-audio2.png)
 
 ![TTS voice Demo](docs/demo-voice.png)
+![SIgnalR Demo](docs/demo-signalr.png)
 
 ---
 

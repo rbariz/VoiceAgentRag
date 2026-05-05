@@ -1,5 +1,7 @@
 using VoiceAgentRag.Api.Middleware;
+using VoiceAgentRag.Api.Realtime;
 using VoiceAgentRag.Application;
+using VoiceAgentRag.Application.Abstractions.Realtime;
 using VoiceAgentRag.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +13,10 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
+builder.Services.AddSignalR();
+
+builder.Services.AddScoped<IRealtimeNotifier, SignalRRealtimeNotifier>();
+
 
 builder.Services.AddCors(options =>
 {
@@ -19,9 +25,11 @@ builder.Services.AddCors(options =>
         policy
             .WithOrigins("http://localhost:5035", "http://localhost:5050")
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
+
 
 var app = builder.Build();
 
@@ -42,5 +50,5 @@ if (!app.Environment.IsDevelopment())
 app.UseCors("DemoCors");
 
 app.MapControllers();
-
+app.MapHub<VoiceAgentHub>("/hubs/voice-agent");
 app.Run();

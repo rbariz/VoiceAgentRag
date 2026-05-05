@@ -3,6 +3,7 @@ using VoiceAgentRag.Application.Abstractions.AI;
 using VoiceAgentRag.Application.Abstractions.Audio;
 using VoiceAgentRag.Application.Abstractions.Persistence;
 using VoiceAgentRag.Application.Abstractions.Rag;
+using VoiceAgentRag.Application.Abstractions.Realtime;
 using VoiceAgentRag.Application.Common;
 using VoiceAgentRag.Contracts.Voice;
 using VoiceAgentRag.Domain.Common;
@@ -18,13 +19,15 @@ namespace VoiceAgentRag.Application.Voice
         private readonly IStreamingAnswerGenerator _streamingAnswerGenerator;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ISpeechToTextService _speechToText;
+        private readonly IRealtimeNotifier _realtime;
         public VoiceAgentStreamingService(
             IConversationRepository conversations,
             IRagService rag,
             IIntentDetector intentDetector,
             IStreamingAnswerGenerator streamingAnswerGenerator,
             IUnitOfWork unitOfWork,
-            ISpeechToTextService speechToText)
+            ISpeechToTextService speechToText,
+            IRealtimeNotifier realtime)
         {
             _conversations = conversations;
             _rag = rag;
@@ -32,6 +35,7 @@ namespace VoiceAgentRag.Application.Voice
             _streamingAnswerGenerator = streamingAnswerGenerator;
             _unitOfWork = unitOfWork;
             _speechToText = speechToText;
+            _realtime = realtime;
         }
 
         public async IAsyncEnumerable<VoiceAgentStreamEvent> HandleTextStreamAsync(
@@ -66,6 +70,12 @@ namespace VoiceAgentRag.Application.Voice
                 _conversations.Add(conversation);
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                await _realtime.ConversationStartedAsync(
+                    conversation.Id,
+                    language,
+                    request.CustomerReference,
+                    cancellationToken);
             }
 
             _conversations.AddMessage(new ConversationMessage(
@@ -75,6 +85,12 @@ namespace VoiceAgentRag.Application.Voice
                 language));
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            await _realtime.UserMessageReceivedAsync(
+    conversation.Id,
+    language,
+    request.UserText,
+    cancellationToken);
 
             var intent = await _intentDetector.DetectAsync(
                 request.UserText,
@@ -104,7 +120,15 @@ namespace VoiceAgentRag.Application.Voice
                 contextChunks,
                 cancellationToken))
             {
+
+                await _realtime.AssistantTokenGeneratedAsync(
+                   conversation.Id,
+                   token,
+                   cancellationToken);
+                
                 fullAnswer += token;
+
+               
 
                 yield return new VoiceAgentStreamEvent(
                     Type: "token",
@@ -122,9 +146,25 @@ namespace VoiceAgentRag.Application.Voice
                 language));
 
             if (intent.RequiresHumanHandoff)
+            {
                 conversation.EscalateToHuman();
 
+                await _realtime.HumanHandoffRequestedAsync(
+                    conversation.Id,
+                    language,
+                    intent.Name,
+                    cancellationToken);
+            }
+
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            await _realtime.AssistantResponseCompletedAsync(
+    conversation.Id,
+    language,
+    fullAnswer,
+    intent.Name,
+    intent.RequiresHumanHandoff,
+    cancellationToken);
 
             yield return new VoiceAgentStreamEvent(
                 Type: "done",

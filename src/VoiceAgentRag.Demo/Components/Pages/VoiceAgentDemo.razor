@@ -1,8 +1,11 @@
 ﻿@page "/voice-agent-demo"
+@implements IAsyncDisposable
 @using VoiceAgentRag.Demo.Services
 @using VoiceAgentRag.Demo.Services.Models
+@using Microsoft.AspNetCore.SignalR.Client
 @inject VoiceAgentApiClient ApiClient
 @inject IJSRuntime JS
+@inject NavigationManager Navigation
 
 <div class="demo-shell">
     <main class="container py-5">
@@ -12,6 +15,10 @@
                     <span class="badge rounded-pill badge-soft-brand px-3 py-2">RAG</span>
                     <span class="badge rounded-pill badge-soft-teal px-3 py-2">Ollama</span>
                     <span class="badge rounded-pill badge-soft-accent px-3 py-2">Vector Search</span>
+
+                    <span class="badge rounded-pill @(IsRealtimeConnected ? "bg-success" : "bg-secondary") px-3 py-2">
+                        @(IsRealtimeConnected ? "Live connected" : "Live offline")
+                    </span>
                 </div>
 
                 <h1 class="fw-bold display-6 mb-3">Voice Agent RAG Demo</h1>
@@ -178,6 +185,34 @@
                 </div>
 
                 <div class="card demo-card p-4 mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="h6 fw-bold mb-0">Realtime events</h3>
+
+                        <span class="badge rounded-pill @(IsRealtimeConnected ? "bg-success" : "bg-secondary")">
+                            @(IsRealtimeConnected ? "Live" : "Offline")
+                        </span>
+                    </div>
+
+                    @if (RealtimeEvents.Count == 0)
+                    {
+                        <p class="small text-secondary mb-0">
+                            No realtime events yet.
+                        </p>
+                    }
+                    else
+                    {
+                        <div class="d-grid gap-2">
+                            @foreach (var item in RealtimeEvents.Take(8))
+                            {
+                                <div class="small border rounded p-2 bg-light">
+                                    @item
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="card demo-card p-4 mb-4">
                     <h3 class="h6 fw-bold mb-3">Try prompts</h3>
 
                     <div class="d-grid gap-2">
@@ -226,8 +261,66 @@
     private bool IsLoading;
     private string? Error;
     private VoiceAgentResponse? LastResponse;
+    // SignalR
+    private HubConnection? HubConnection;
+    private bool IsRealtimeConnected;
+    private readonly List<string> RealtimeEvents = [];
+    //
 
     private readonly List<ChatMessageVm> Messages = [];
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        HubConnection = new HubConnectionBuilder()
+            .WithUrl("http://localhost:5234/hubs/voice-agent")
+            .WithAutomaticReconnect()
+            .Build();
+
+        HubConnection.On<object>("ConversationStarted", payload =>
+        {
+            RealtimeEvents.Insert(0, $"🟢 Conversation started - {DateTime.Now:HH:mm:ss}");
+            InvokeAsync(StateHasChanged);
+        });
+
+        HubConnection.On<object>("UserMessageReceived", payload =>
+        {
+            RealtimeEvents.Insert(0, $"👤 User message received - {DateTime.Now:HH:mm:ss}");
+            InvokeAsync(StateHasChanged);
+        });
+
+        HubConnection.On<object>("AssistantTokenGenerated", payload =>
+        {
+            // Optionnel : trop verbeux si on affiche chaque token.
+            // Garde vide pour éviter de polluer l'UI.
+        });
+
+        HubConnection.On<object>("AssistantResponseCompleted", payload =>
+        {
+            RealtimeEvents.Insert(0, $"🤖 Assistant response completed - {DateTime.Now:HH:mm:ss}");
+            InvokeAsync(StateHasChanged);
+        });
+
+        HubConnection.On<object>("HumanHandoffRequested", payload =>
+        {
+            RealtimeEvents.Insert(0, $"⚠️ Human handoff requested - {DateTime.Now:HH:mm:ss}");
+            InvokeAsync(StateHasChanged);
+        });
+
+        try
+        {
+            await HubConnection.StartAsync();
+            await HubConnection.InvokeAsync("JoinOps");
+
+            IsRealtimeConnected = true;
+            RealtimeEvents.Insert(0, $"✅ Realtime connected - {DateTime.Now:HH:mm:ss}");
+        }
+        catch (Exception ex)
+        {
+            IsRealtimeConnected = false;
+            RealtimeEvents.Insert(0, $"❌ Realtime connection failed: {ex.Message}");
+        }
+    }
 
     private string Placeholder => Language switch
     {
@@ -475,5 +568,13 @@
             return;
 
         await JS.InvokeVoidAsync("tts.speak", text, Language);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (HubConnection is not null)
+        {
+            await HubConnection.DisposeAsync();
+        }
     }
 }
