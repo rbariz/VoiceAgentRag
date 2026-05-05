@@ -31,6 +31,8 @@ Fonctionnalités :
 ![Démo upload audio 1](docs/demo-audio1.png)
 ![Démo upload audio 2](docs/demo-audio2.png)
 
+![Démo TTS voice](docs/demo-voice.png)
+
 ---
 
 ## Objectifs
